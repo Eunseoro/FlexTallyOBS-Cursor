@@ -13,7 +13,6 @@ import { LogItem } from 'src/app/_models/LogItem'
 import { OutputType } from 'src/app/_models/OutputType'
 import { Source } from 'src/app/_models/Source'
 import { SourceType } from 'src/app/_models/SourceType'
-import { TSLClient } from 'src/app/_models/TSLClient'
 import { SocketService } from 'src/app/_services/socket.service'
 import Swal from 'sweetalert2'
 import { SweetAlertOptions } from 'sweetalert2'
@@ -85,10 +84,6 @@ export class SettingsComponent {
 	// add / edit Device Actions
 	public editingDeviceAction = false
 	public currentDeviceAction: DeviceAction = {} as DeviceAction
-
-	// add / edit TSL Client
-	public editingTSLClient = false
-	public currentTSLClient: TSLClient = {} as TSLClient
 
 	// add / edit Cloud Destination
 	public editingCloudDestination = false
@@ -371,16 +366,6 @@ export class SettingsComponent {
 		this.socketService.socket.emit('manage', arbiterObj)
 	}
 
-	@Confirmable('Are you sure you want to delete this TSL Client?')
-	public deleteTSLClient(tslClient: TSLClient) {
-		let arbiterObj = {
-			action: 'delete',
-			type: 'tsl_client',
-			tslClientId: tslClient.id,
-		}
-		this.socketService.socket.emit('manage', arbiterObj)
-	}
-
 	@Confirmable('Are you sure you want to delete this Bus Option?')
 	public deleteBusOption(busOption: BusOption) {
 		let arbiterObj = {
@@ -590,18 +575,6 @@ export class SettingsComponent {
 		this.socketService.socket.emit('manage', arbiterObj)
 	}
 
-	public saveCurrentTSLClient() {
-		const tslClientObj = {
-			...this.currentTSLClient,
-		} as TSLClient
-		const arbiterObj = {
-			action: this.editingTSLClient ? 'edit' : 'add',
-			type: 'tsl_client',
-			tslClient: tslClientObj,
-		}
-		this.socketService.socket.emit('manage', arbiterObj)
-	}
-
 	public saveCurrentCloudDestination() {
 		const cloudDestinationObj = {
 			...this.currentCloudDestination,
@@ -672,12 +645,6 @@ export class SettingsComponent {
 		this.modalService.open(modal)
 	}
 
-	public addTSLClient(modal: any) {
-		this.editingTSLClient = false
-		this.currentTSLClient = {} as TSLClient
-		this.modalService.open(modal)
-	}
-
 	public addCloudDestination(modal: any) {
 		this.editingCloudDestination = false
 		this.currentCloudDestination = {} as CloudDestination
@@ -744,13 +711,6 @@ export class SettingsComponent {
 		this.currentDevice = {
 			...device,
 		} as Device
-		this.modalService.open(modal)
-	}
-	public editTSLClient(tslClient: TSLClient, modal: any) {
-		this.editingTSLClient = true
-		this.currentTSLClient = {
-			...tslClient,
-		} as TSLClient
 		this.modalService.open(modal)
 	}
 	public editCloudDestination(cloudDestination: CloudDestination, modal: any) {
