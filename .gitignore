@@ -1,0 +1,44 @@
+# 의존성 폴더
+node_modules/
+UI/node_modules/
+
+# 빌드 출력물
+dist/
+ui-dist/
+
+# 환경 설정
+.env
+.env.local
+
+# 로그
+logs/
+*.log
+npm-debug.log*
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# IDE 설정
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 테스트 커버리지
+coverage/
+
+# Electron 빌드
+release/
+*.dmg
+*.exe
+*.deb
+*.rpm
+*.AppImage
+
+# 임시 파일
+*.tmp
+*.temp
+
+# 설정 백업
+*.bak
