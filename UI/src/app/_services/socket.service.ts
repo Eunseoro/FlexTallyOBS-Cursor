@@ -17,10 +17,8 @@ import { OutputTypeDataFields } from '../_models/OutputTypeDataFields'
 import { Port } from '../_models/Port'
 import { NetworkDiscovery } from '../_models/NetworkDiscovery'
 import { Source } from '../_models/Source'
-import { TSLTallyData } from '../_models/TSLTallyData'
 import { SourceType } from '../_models/SourceType'
 import { SourceTypeDataFields } from '../_models/SourceTypeDataFields'
-import { TSLClient } from '../_models/TSLClient'
 import { ErrorReport } from '../_models/ErrorReport'
 import { ErrorReportsListElement } from '../_models/ErrorReportsListElement'
 import { DeviceTallyData } from '../_models/TallyData'
@@ -55,13 +53,11 @@ export class SocketService {
 	public sourceTypeDataFields: SourceTypeDataFields[] = []
 	public testModeOn = false
 	public testModeInterval: number = 1000
-	public tslclients_1secupdate?: boolean
 	public deviceSources: DeviceSource[] = []
 	public addresses: Addresses = {}
 	public deviceActions: DeviceAction[] = []
 	public outputTypes: OutputType[] = []
 	public outputTypeDataFields: OutputTypeDataFields[] = []
-	public tslClients: TSLClient[] = []
 	public cloudDestinations: CloudDestination[] = []
 	public cloudKeys: string[] = []
 	public cloudClients: CloudClient[] = []
@@ -212,9 +208,6 @@ export class SocketService {
 		this.socket.on('device_actions', (deviceActions: DeviceAction[]) => {
 			this.deviceActions = deviceActions
 		})
-		this.socket.on('tsl_clients', (clients: TSLClient[]) => {
-			this.tslClients = clients
-		})
 		this.socket.on('cloud_destinations', (destinations: CloudDestination[]) => {
 			this.cloudDestinations = destinations
 		})
@@ -241,7 +234,7 @@ export class SocketService {
 				deviceSources: DeviceSource[],
 				deviceActions: DeviceAction[],
 				device_states: DeviceState[],
-				tslClients: TSLClient[],
+				_tslClients: any[], // TSL 기능 제거됨, 호환성 유지용
 				cloudDestinations: CloudDestination[],
 				cloudKeys: string[],
 				cloudClients: CloudClient[],
@@ -259,7 +252,7 @@ export class SocketService {
 				this.deviceSources = deviceSources
 				this.deviceActions = deviceActions
 				this.device_states = device_states
-				this.tslClients = tslClients
+				// TSL 기능 제거됨
 
 				this.cloudDestinations = cloudDestinations
 				this.cloudKeys = cloudKeys
@@ -307,12 +300,6 @@ export class SocketService {
 					this.socket.emit('devices')
 					this.socket.emit('device_actions')
 					break
-				case 'tsl-client-added-successfully':
-				case 'tsl-client-edited-successfully':
-				case 'tsl-client-deleted-successfully':
-					this.closeModals.next()
-					this.socket.emit('tsl_clients')
-					break
 				case 'bus-option-added-successfully':
 				case 'bus-option-edited-successfully':
 				case 'bus-option-deleted-successfully':
@@ -354,9 +341,6 @@ export class SocketService {
 		})
 		this.socket.on('testmode', (value: boolean) => {
 			this.testModeOn = value
-		})
-		this.socket.on('tslclients_1secupdate', (value: boolean) => {
-			this.tslclients_1secupdate = value
 		})
 		this.socket.on('PortsInUse', (ports: Port[]) => {
 			this.portsInUse = ports
