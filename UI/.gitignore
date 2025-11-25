@@ -7,6 +7,13 @@
 # Only exists if Bazel was run
 /bazel-out
 
+# Angular cache
+/.angular
+
+# Auto-generated files (copied from backend during build)
+/src/app/_models/
+/src/environments/versions.ts
+
 # dependencies
 /node_modules
 
