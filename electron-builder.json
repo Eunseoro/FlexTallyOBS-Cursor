@@ -1,5 +1,5 @@
 {
-	"productName": "TallyArbiter",
+	"productName": "FlexTally OBS Bridge",
 	"directories": {
 		"output": "./release/"
 	},
