@@ -4,7 +4,6 @@ import { Device } from './Device'
 import { DeviceAction } from './DeviceAction'
 import { DeviceSource } from './DeviceSource'
 import { Source } from './Source'
-import { TSLClient } from './TSLClient'
 import { User } from './User'
 
 export interface Manage {
@@ -13,7 +12,6 @@ export interface Manage {
 		| 'device'
 		| 'device_source'
 		| 'device_action'
-		| 'tsl_client'
 		| 'bus_option'
 		| 'cloud_destination'
 		| 'cloud_key'
@@ -27,8 +25,6 @@ export interface Manage {
 	deviceId?: string
 	device_source?: DeviceSource
 	device_action?: DeviceAction
-	tslClient?: TSLClient
-	tslClientId: string
 	busOption?: BusOption
 	busOptionId?: string
 	cloudDestination?: CloudDestination
