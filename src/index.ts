@@ -31,7 +31,6 @@ import { DeviceAction } from './_models/DeviceAction'
 import { Device } from './_models/Device'
 import { AddressTallyData, DeviceTallyData, SourceTallyData } from './_models/TallyData'
 import { OutputType } from './_models/OutputType'
-import { TSLClient } from './_models/TSLClient'
 import { OutputTypeDataFields } from './_models/OutputTypeDataFields'
 import { ListenerClientConnect } from './_models/ListenerClientConnect'
 import { Manage } from './_models/Manage'
@@ -67,7 +66,6 @@ import {
 } from './_helpers/errorReports'
 import { DeviceState } from './_models/DeviceState'
 import { VMixEmulator } from './_modules/VMix'
-import { TSLListenerProvider } from './_modules/TSL'
 import { ListenerProvider } from './_modules/_ListenerProvider'
 import { InternalTestModeSource } from './sources/InternalTestMode'
 import { authenticate, validateAccessToken, getUsersList, addUser, editUser, deleteUser } from './_helpers/auth'
@@ -123,7 +121,6 @@ const socketupdates_Settings: string[] = [
 	'device_sources',
 	'device_states',
 	'listener_clients',
-	'tsl_clients',
 	'cloud_destinations',
 	'bus_options',
 	'cloud_keys',
@@ -147,15 +144,12 @@ const socketupdates_Companion: string[] = [
 	'device_sources',
 	'device_states',
 	'listener_clients',
-	'tsl_clients',
 	'cloud_destinations',
 	'bus_options',
 ]
 
 var listener_clients = [] //array of connected listener clients (web, python, relay, etc.)
 let vMixEmulator: VMixEmulator
-export let tslListenerProvider: TSLListenerProvider
-let tsl_clients_interval: NodeJS.Timer | null = null
 
 var cloud_destinations: CloudDestination[] = [] //array of Tally Arbiter Cloud Destinations (host, port, key)
 var cloud_destinations_sockets: CloudDestinationSocket[] = [] //array of actual socket connections
@@ -466,7 +460,7 @@ function initialSetup() {
 						device_sources,
 						device_actions,
 						getDeviceStates(),
-						tslListenerProvider.tsl_clients,
+						[], // tsl_clients removed
 						cloud_destinations,
 						cloud_keys,
 						cloud_clients,
@@ -475,7 +469,6 @@ function initialSetup() {
 					socket.emit('logs', Logs)
 					socket.emit('PortsInUse', PortsInUse.value)
 					socket.emit('networkDiscovery', RegisteredNetworkDiscoveryServices.value)
-					socket.emit('tslclients_1secupdate', currentConfig.tsl_clients_1secupdate)
 				})
 				.catch((e) => {
 					console.error(e)
@@ -506,7 +499,6 @@ function initialSetup() {
 			socket.emit('device_sources', device_sources)
 			socket.emit('device_states', getDeviceStates())
 			socket.emit('listener_clients', listener_clients)
-			socket.emit('tsl_clients', tslListenerProvider.tsl_clients)
 			socket.emit('cloud_destinations', cloud_destinations)
 		})
 
@@ -922,10 +914,6 @@ function initialSetup() {
 			socket.emit('listener_clients', listener_clients)
 		})
 
-		socket.on('tsl_clients', () => {
-			socket.emit('tsl_clients', tslListenerProvider.tsl_clients)
-		})
-
 		socket.on('cloud_destinations', () => {
 			socket.emit('cloud_destinations', cloud_destinations)
 		})
@@ -942,18 +930,6 @@ function initialSetup() {
 			requireRole('settings:testing')
 				.then((user) => {
 					ToggleTestMode(value, interval)
-				})
-				.catch((err) => {
-					console.error(err)
-				})
-		})
-
-		socket.on('tslclients_1secupdate', (value: boolean) => {
-			requireRole('settings:listeners')
-				.then((user) => {
-					currentConfig.tsl_clients_1secupdate = value
-					SaveConfig()
-					TSLClients_1SecUpdate(value)
 				})
 				.catch((err) => {
 					console.error(err)
@@ -1063,9 +1039,8 @@ function initialSetup() {
 	logger('Starting Listener Providers.', 'info-quiet')
 
 	vMixEmulator = new VMixEmulator()
-	tslListenerProvider = new TSLListenerProvider()
 
-	const providers = [vMixEmulator, tslListenerProvider]
+	const providers = [vMixEmulator]
 	for (const provider of providers as ListenerProvider[]) {
 		provider.on('chatMessage', (type, socketId, message) => SendMessage(type, socketId, message))
 		provider.on('updateSockets', (type) => {
@@ -1100,26 +1075,6 @@ function getSources(): Source[] {
 		s.connected = SourceClients[s.id]?.connected?.value || false
 		return s
 	})
-}
-
-function TSLClients_1SecUpdate(value) {
-	if (tsl_clients_interval !== null) {
-		clearInterval(tsl_clients_interval)
-	}
-
-	logger(`TSL Clients 1 Second Updates are turned ${value ? 'on' : 'off'}.`, 'info')
-
-	if (value) {
-		logger('Starting TSL Clients 1 Second Interval.', 'info')
-		tsl_clients_interval = setInterval(TSLClients_UpdateAll, 1000)
-	}
-}
-
-function TSLClients_UpdateAll() {
-	//loops through all devices and sends out the state, 1 per second
-	for (const device of devices) {
-		tslListenerProvider.updateListenerClientsForDevice(currentDeviceTallyData, device)
-	}
 }
 
 function getDeviceStates(deviceId?: string): DeviceState[] {
@@ -1394,7 +1349,6 @@ function UpdateDeviceState(deviceId: string) {
 	UpdateSockets('device_states')
 	UpdateListenerClients(deviceId)
 	vMixEmulator?.updateListenerClients(currentDeviceTallyData)
-	tslListenerProvider?.updateListenerClientsForDevice(currentDeviceTallyData, device)
 }
 
 export function logger(log, type: 'info-quiet' | 'info' | 'error' | 'console_action' = 'info-quiet'): void {
@@ -1443,14 +1397,6 @@ function loadConfig() {
 		device_actions = currentConfig.device_actions
 		logger('Tally Arbiter Device Actions loaded.', 'info')
 		logger(`${device_actions.length} Device Actions configured.`, 'info')
-
-		if (currentConfig.tsl_clients_1secupdate) {
-			currentConfig.tsl_clients_1secupdate = true
-			TSLClients_1SecUpdate(true)
-		} else {
-			currentConfig.tsl_clients_1secupdate = false
-			TSLClients_1SecUpdate(false)
-		}
 
 		if (currentConfig.cloud_destinations) {
 			cloud_destinations = currentConfig.cloud_destinations
@@ -1640,16 +1586,6 @@ function TallyArbiter_Manage(obj: Manage, access_token: string = ''): Promise<Ma
 						result = TallyArbiter_Edit_Device_Action(obj)
 					} else if (obj.action === 'delete') {
 						result = TallyArbiter_Delete_Device_Action(obj)
-					}
-					break
-				case 'tsl_client':
-					if (!validate_user_role('settings:listeners')) return
-					if (obj.action === 'add') {
-						result = TallyArbiter_Add_TSL_Client(obj)
-					} else if (obj.action === 'edit') {
-						result = TallyArbiter_Edit_TSL_Client(obj)
-					} else if (obj.action === 'delete') {
-						result = TallyArbiter_Delete_TSL_Client(obj)
 					}
 					break
 				case 'bus_option':
@@ -1859,7 +1795,6 @@ function UpdateCloud(
 		| 'device_states'
 		| 'listener_clients'
 		| 'vmix_clients'
-		| 'tsl_clients'
 		| 'cloud_destinations'
 		| 'cloud_clients'
 		| 'PortsInUse'
@@ -1909,7 +1844,6 @@ type SocketUpdateDataType =
 	| 'device_states'
 	| 'listener_clients'
 	| 'vmix_clients'
-	| 'tsl_clients'
 	| 'cloud_destinations'
 	| 'cloud_clients'
 	| 'PortsInUse'
@@ -1927,7 +1861,6 @@ function UpdateSockets(dataType: SocketUpdateDataType) {
 		device_states: () => getDeviceStates(),
 		listener_clients: () => listener_clients,
 		vmix_clients: () => vMixEmulator.vmix_client_data,
-		tsl_clients: () => tslListenerProvider.tsl_clients,
 		cloud_destinations: () => cloud_destinations,
 		cloud_clients: () => cloud_clients,
 	}
@@ -2050,8 +1983,6 @@ function TallyArbiter_Add_Device(obj: Manage): ManageResponse {
 
 	UpdateDeviceState(deviceObj.id)
 
-	tslListenerProvider.updateListenerClientsForDevice(currentDeviceTallyData, deviceObj)
-
 	logger(`Device Added: ${deviceObj.name}`, 'info')
 
 	return { result: 'device-added-successfully' }
@@ -2068,7 +1999,6 @@ function TallyArbiter_Edit_Device(obj: Manage): ManageResponse {
 			devices[i].linkedBusses = deviceObj.linkedBusses
 		}
 	}
-	tslListenerProvider.updateListenerClientsForDevice(currentDeviceTallyData, deviceObj)
 
 	UpdateCloud('devices')
 
@@ -2261,55 +2191,6 @@ function TallyArbiter_Delete_Device_Action(obj: Manage): ManageResponse {
 	logger(`Device Action Deleted: ${deviceName}`, 'info')
 
 	return { result: 'device-action-deleted-successfully', deviceId: deviceId }
-}
-
-function TallyArbiter_Add_TSL_Client(obj: Manage): ManageResponse {
-	let tslClientObj = obj.tslClient
-	tslClientObj.id = uuidv4()
-	currentConfig.tsl_clients.push(tslClientObj)
-
-	logger(`TSL Client Added: ${tslClientObj.ip}:${tslClientObj.port} (${tslClientObj.transport})`, 'info')
-
-	tslListenerProvider.startTSLClientConnection(tslClientObj)
-
-	return { result: 'tsl-client-added-successfully' }
-}
-
-function TallyArbiter_Edit_TSL_Client(obj: Manage): ManageResponse {
-	let tslClientObj = obj.tslClient
-
-	for (let i = 0; i < currentConfig.tsl_clients.length; i++) {
-		if (currentConfig.tsl_clients[i].id === tslClientObj.id) {
-			//something was changed so we need to stop and restart the connection
-			tslListenerProvider.stopTSLClientConnection(tslClientObj.id)
-			currentConfig.tsl_clients[i].ip = tslClientObj.ip
-			currentConfig.tsl_clients[i].port = tslClientObj.port
-			currentConfig.tsl_clients[i].transport = tslClientObj.transport
-			setTimeout(() => tslListenerProvider.startTSLClientConnection(currentConfig.tsl_clients[i]), 5000) //opens the port again after 5 seconds to give the old port time to close
-			break
-		}
-	}
-
-	logger(`TSL Client Edited: ${tslClientObj.ip}:${tslClientObj.port} (${tslClientObj.transport})`, 'info')
-
-	return { result: 'tsl-client-edited-successfully' }
-}
-
-function TallyArbiter_Delete_TSL_Client(obj: Manage): ManageResponse {
-	let tslClientObj = GetTSLClientById(obj.tslClientId)
-	let tslClientId = obj.tslClientId
-
-	for (let i = 0; i < currentConfig.tsl_clients.length; i++) {
-		if (currentConfig.tsl_clients[i].id === tslClientId) {
-			tslListenerProvider.stopTSLClientConnection(tslClientId)
-			currentConfig.tsl_clients.splice(i, 1)
-			break
-		}
-	}
-
-	logger(`TSL Client Deleted: ${tslClientObj.ip}:${tslClientObj.port} (${tslClientObj.transport})`, 'info')
-
-	return { result: 'tsl-client-deleted-successfully' }
 }
 
 function TallyArbiter_Add_Bus_Option(obj: Manage): ManageResponse {
@@ -2516,11 +2397,6 @@ function GetDeviceByDeviceId(deviceId: string): Device {
 	}
 
 	return device
-}
-
-function GetTSLClientById(tslClientId: string): TSLClient {
-	//gets the TSL Client by the Id
-	return tslListenerProvider.tsl_clients.find(({ id }) => id === tslClientId)
 }
 
 function GetCloudDestinationById(cloudId: string): CloudDestination {

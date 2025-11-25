@@ -2,7 +2,6 @@ import { BusOption } from './BusOption'
 import { CloudDestination } from './CloudDestination'
 import { ConfigSecuritySection } from './ConfigSecuritySection'
 import { User } from './User'
-import { ConfigTSLClient } from './ConfigTSLClient'
 import { Device } from './Device'
 import { DeviceAction } from './DeviceAction'
 import { DeviceSource } from './DeviceSource'
@@ -17,8 +16,6 @@ export interface Config {
 	devices: Device[]
 	device_sources: DeviceSource[]
 	device_actions: DeviceAction[]
-	tsl_clients: ConfigTSLClient[]
-	tsl_clients_1secupdate: boolean
 	cloud_destinations: CloudDestination[]
 	cloud_keys: string[]
 	bus_options: BusOption[]

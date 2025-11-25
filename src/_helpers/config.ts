@@ -1,6 +1,5 @@
-import { logger, tslListenerProvider } from '..'
+import { logger } from '..'
 import { Config } from '../_models/Config'
-import { ConfigTSLClient } from '../_models/ConfigTSLClient'
 import fs from 'fs-extra'
 import path from 'path'
 import { randomBytes } from 'crypto'
@@ -34,8 +33,6 @@ export const ConfigDefaults: Config = {
 	device_sources: [],
 	devices: [],
 	sources: [],
-	tsl_clients: [],
-	tsl_clients_1secupdate: false,
 	bus_options: [
 		{ id: 'e393251c', label: 'Preview', type: 'preview', color: '#3fe481', priority: 50, visible: true },
 		{ id: '334e4eda', label: 'Program', type: 'program', color: '#e43f5a', priority: 200, visible: true },
@@ -58,26 +55,7 @@ export let isConfigLoaded: boolean = false
 
 export function SaveConfig() {
 	try {
-		let tsl_clients_clean: ConfigTSLClient[] = []
-
-		if (tslListenerProvider !== undefined) {
-			for (let i = 0; i < tslListenerProvider.tsl_clients.length; i++) {
-				let tslClientObj: ConfigTSLClient = {} as ConfigTSLClient
-				tslClientObj.id = tslListenerProvider.tsl_clients[i].id
-				tslClientObj.ip = tslListenerProvider.tsl_clients[i].ip
-				tslClientObj.port = tslListenerProvider.tsl_clients[i].port
-				tslClientObj.transport = tslListenerProvider.tsl_clients[i].transport
-				tsl_clients_clean.push(tslClientObj)
-			}
-		}
-
-		let configJson: Config = {
-			...currentConfig,
-			tsl_clients: tsl_clients_clean,
-		}
-
-		fs.writeFileSync(config_file, JSON.stringify(configJson, null, 1), 'utf8')
-
+		fs.writeFileSync(config_file, JSON.stringify(currentConfig, null, 1), 'utf8')
 		logger('Config file saved to disk.', 'info-quiet')
 	} catch (error) {
 		logger(`Error saving configuration to file: ${error}`, 'error')
