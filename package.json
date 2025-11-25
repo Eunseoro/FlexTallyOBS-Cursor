@@ -92,10 +92,13 @@
 	"main": "main.js",
 	"scripts": {
 		"start": "ts-node-dev src/index.ts --dev",
+		"dev": "ts-node-dev --respawn --transpile-only src/index.ts --dev",
+		"dev:backend": "ts-node-dev --respawn --transpile-only src/index.ts --dev",
 		"format": "prettier -w .",
 		"prepare": "cd UI && npm i && npm run build",
 		"redundancyjs": "redundancyjs",
 		"build": "tsc",
+		"build:backend": "tsc",
 		"prepack": "npm run build",
 		"prepublishOnly": "npm run build",
 		"desktop": "npm run build && electron .",
